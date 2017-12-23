@@ -26,7 +26,7 @@ PDNSD_SOURCES  := $(wildcard $(LOCAL_PATH)/pdnsd/src/*.c)
 
 LOCAL_MODULE    := pdnsd
 LOCAL_SRC_FILES := $(PDNSD_SOURCES:$(LOCAL_PATH)/%=%)
-LOCAL_CFLAGS    := -Wall -O2 -I$(LOCAL_PATH)/pdnsd -DHAVE_STPCPY
+LOCAL_CFLAGS    := -Wall -I$(LOCAL_PATH)/pdnsd -DHAVE_STPCPY
 
 include $(BUILD_EXECUTABLE)
 
@@ -39,7 +39,7 @@ include $(CLEAR_VARS)
 ANCILLARY_SOURCE := fd_recv.c fd_send.c
 
 LOCAL_MODULE := libancillary
-LOCAL_CFLAGS := -O2 -I$(LOCAL_PATH)/libancillary
+LOCAL_CFLAGS := -I$(LOCAL_PATH)/libancillary
 
 LOCAL_SRC_FILES := $(addprefix libancillary/, $(ANCILLARY_SOURCE))
 
