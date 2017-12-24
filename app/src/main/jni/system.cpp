@@ -88,7 +88,7 @@ static JNINativeMethod method_table[] = {
         (void*) Java_net_typeblog_socks_system_sendfd },
     { "exec", "(Ljava/lang/String;)V",
         (void*) Java_net_typeblog_socks_system_exec },
-    { "getABI", "()Ljava/lang/String;",
+    { "getAbi", "()Ljava/lang/String;",
         (void*) Java_net_typeblog_socks_system_getabi }
 };
 
