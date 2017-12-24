@@ -1,0 +1,172 @@
+diff -Nuar badvpn-e0df4c0414f36985f9517317ce25ed44a182621a/tun2socks/SocksUdpGwClient.c badvpn/tun2socks/SocksUdpGwClient.c
+--- badvpn-e0df4c0414f36985f9517317ce25ed44a182621a/tun2socks/SocksUdpGwClient.c	2015-11-05 05:21:20.000000000 +0000
++++ badvpn/tun2socks/SocksUdpGwClient.c	2015-11-01 11:09:39.000000000 +0000
+@@ -33,7 +33,7 @@
+ 
+ #include <generated/blog_channel_SocksUdpGwClient.h>
+ 
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+ 
+ #include <misc/socks_proto.h>
+ #define CONNECTION_UDP_BUFFER_SIZE 1
+@@ -49,7 +49,7 @@
+ 
+ #endif
+ 
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+ static void dgram_handler (SocksUdpGwClient_connection *o, int event);
+ static void dgram_handler_received (SocksUdpGwClient_connection *o, uint8_t *data, int data_len);
+ static int conaddr_comparator (void *unused, SocksUdpGwClient_conaddr *v1, SocksUdpGwClient_conaddr *v2);
+@@ -485,7 +485,7 @@
+ {
+     // see asserts in UdpGwClient_Init
+     ASSERT(!BAddr_IsInvalid(&socks_server_addr))
+-#ifndef ANDROID
++#ifndef ANDROID_UDP
+     ASSERT(remote_udpgw_addr.type == BADDR_TYPE_IPV4 || remote_udpgw_addr.type == BADDR_TYPE_IPV6)
+ #endif
+     
+@@ -499,7 +499,7 @@
+     o->user = user;
+     o->handler_received = handler_received;
+     
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+     // compute MTUs
+     o->udpgw_mtu = udpgw_compute_mtu(o->udp_mtu);
+     o->max_connections = max_connections;
+@@ -544,7 +544,7 @@
+ {
+     DebugObject_Free(&o->d_obj);
+     
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+     // free connections
+     while (!LinkedList1_IsEmpty(&o->connections_list)) {
+         SocksUdpGwClient_connection *con = UPPER_OBJECT(LinkedList1_GetFirst(&o->connections_list), SocksUdpGwClient_connection, connections_list_node);
+@@ -569,7 +569,7 @@
+     DebugObject_Access(&o->d_obj);
+     // see asserts in UdpGwClient_SubmitPacket
+     
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+     ASSERT(local_addr.type == BADDR_TYPE_IPV4 || local_addr.type == BADDR_TYPE_IPV6)
+     ASSERT(remote_addr.type == BADDR_TYPE_IPV4 || remote_addr.type == BADDR_TYPE_IPV6)
+     ASSERT(data_len >= 0)
+diff -Nuar badvpn-e0df4c0414f36985f9517317ce25ed44a182621a/tun2socks/SocksUdpGwClient.h badvpn/tun2socks/SocksUdpGwClient.h
+--- badvpn-e0df4c0414f36985f9517317ce25ed44a182621a/tun2socks/SocksUdpGwClient.h	2015-11-05 05:21:20.000000000 +0000
++++ badvpn/tun2socks/SocksUdpGwClient.h	2015-11-01 11:09:39.000000000 +0000
+@@ -32,7 +32,7 @@
+ #include <misc/debug.h>
+ #include <base/DebugObject.h>
+ #include <system/BReactor.h>
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+ #include <protocol/udpgw_proto.h>
+ #include <protocol/packetproto.h>
+ #include <system/BDatagram.h>
+@@ -58,7 +58,7 @@
+     BReactor *reactor;
+     void *user;
+     SocksUdpGwClient_handler_received handler_received;
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+     int udpgw_mtu;
+     int num_connections;
+     int max_connections;
+@@ -74,7 +74,7 @@
+     DebugObject d_obj;
+ } SocksUdpGwClient;
+ 
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+ typedef struct {
+     BAddr local_addr;
+     BAddr remote_addr;
+diff -Nuar badvpn-e0df4c0414f36985f9517317ce25ed44a182621a/tun2socks/tun2socks.c badvpn/tun2socks/tun2socks.c
+--- badvpn-e0df4c0414f36985f9517317ce25ed44a182621a/tun2socks/tun2socks.c	2015-11-05 05:21:20.000000000 +0000
++++ badvpn/tun2socks/tun2socks.c	2015-11-01 11:09:39.000000000 +0000
+@@ -408,8 +408,8 @@
+ 
+     if (options.fake_proc) {
+         // Fake process name to cheat on Lollipop
+-        strcpy(argv[0], "com.github.shadowsocks");
+-        prctl(PR_SET_NAME, "com.github.shadowsocks");
++        strcpy(argv[0], "net.typeblog.socks");
++        prctl(PR_SET_NAME, "net.typeblog.socks");
+     }
+ 
+     // handle --help and --version
+@@ -502,7 +502,7 @@
+         goto fail2;
+     }
+ 
+-    char *path = "/data/data/com.github.shadowsocks/sock_path";
++    char *path = "/data/data/net.typeblog.socks/sock_path";
+     unlink(path);
+     memset(&addr, 0, sizeof(addr));
+     addr.sun_family = AF_UNIX;
+@@ -732,7 +732,7 @@
+         "        [--password <password>]\n"
+         "        [--password-file <file>]\n"
+         "        [--append-source-to-username]\n"
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+         "        [--enable-udprelay]\n"
+         "        [--udprelay-max-connections <number>]\n"
+ #else
+@@ -976,7 +976,7 @@
+         else if (!strcmp(arg, "--append-source-to-username")) {
+             options.append_source_to_username = 1;
+         }
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+         else if (!strcmp(arg, "--enable-udprelay")) {
+             options.udpgw_remote_server_addr = "0.0.0.0:0";
+ #else
+@@ -989,7 +989,7 @@
+             i++;
+ #endif
+         }
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+         else if (!strcmp(arg, "--udprelay-max-connections")) {
+ #else
+         else if (!strcmp(arg, "--udpgw-max-connections")) {
+@@ -1004,7 +1004,7 @@
+             }
+             i++;
+         }
+-#ifndef ANDROID
++#ifndef ANDROID_UDP
+         else if (!strcmp(arg, "--udpgw-connection-buffer-size")) {
+             if (1 >= argc - i) {
+                 fprintf(stderr, "%s: requires an argument\n", arg);
+@@ -1126,7 +1126,7 @@
+     // resolve remote udpgw server address
+     if (options.udpgw_remote_server_addr) {
+         if (!BAddr_Parse2(&udpgw_remote_server_addr, options.udpgw_remote_server_addr, NULL, 0, 0)) {
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+             BLog(BLOG_ERROR, "udprelay server addr: BAddr_Parse2 failed");
+ #else
+             BLog(BLOG_ERROR, "remote udpgw server addr: BAddr_Parse2 failed");
+@@ -2309,14 +2309,14 @@
+         } break;
+ 
+         case BADDR_TYPE_IPV6: {
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+             BLog(BLOG_INFO, "UDP/IPv6: from udprelay %d bytes", data_len);
+ #else
+             BLog(BLOG_INFO, "UDP/IPv6: from udpgw %d bytes", data_len);
+ #endif
+ 
+             if (!options.netif_ip6addr) {
+-#ifdef ANDROID
++#ifdef ANDROID_UDP
+                 BLog(BLOG_ERROR, "got IPv6 packet from udprelay but IPv6 is disabled");
+ #else
+                 BLog(BLOG_ERROR, "got IPv6 packet from udpgw but IPv6 is disabled");
