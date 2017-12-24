@@ -52,6 +52,7 @@ typedef void (*SocksUdpGwClient_handler_received) (void *user, BAddr local_addr,
 typedef struct {
     int udp_mtu;
     BAddr socks_server_addr;
+    BAddr dnsgw;
     const struct BSocksClient_auth_info *auth_info;
     size_t num_auth_info;
     BAddr remote_udpgw_addr;
@@ -86,6 +87,7 @@ typedef struct {
     BPending first_job;
     const uint8_t *first_data;
     int first_data_len;
+    int is_dns;
     BDatagram udp_dgram;
     BufferWriter udp_send_writer;
     PacketBuffer udp_send_buffer;
@@ -97,7 +99,7 @@ typedef struct {
 #endif
 
 int SocksUdpGwClient_Init (SocksUdpGwClient *o, int udp_mtu, int max_connections, int send_buffer_size, btime_t keepalive_time,
-                           BAddr socks_server_addr, const struct BSocksClient_auth_info *auth_info, size_t num_auth_info,
+                           BAddr socks_server_addr, BAddr dnsgw, const struct BSocksClient_auth_info *auth_info, size_t num_auth_info,
                            BAddr remote_udpgw_addr, btime_t reconnect_time, BReactor *reactor, void *user,
                            SocksUdpGwClient_handler_received handler_received) WARN_UNUSED;
 void SocksUdpGwClient_Free (SocksUdpGwClient *o);

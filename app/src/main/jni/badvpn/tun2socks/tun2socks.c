@@ -70,7 +70,7 @@
 
 #include <generated/blog_channel_tun2socks.h>
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 
 #include <ancillary.h>
 
@@ -193,10 +193,11 @@ struct {
     int udpgw_max_connections;
     int udpgw_connection_buffer_size;
     int udpgw_transparent_dns;
-#ifdef ANDROID
+#ifdef __ANDROID__
     int tun_fd;
     int tun_mtu;
     int fake_proc;
+    char *sock_path;
     char *pid;
     char *dnsgw;
 #else
@@ -278,7 +279,7 @@ BPending lwip_init_job;
 
 // lwip netif
 int have_netif;
-struct netif netif;
+struct netif the_netif;
 
 // lwip TCP listener
 struct tcp_pcb *listener;
@@ -292,7 +293,7 @@ LinkedList1 tcp_clients;
 // number of clients
 int num_clients;
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 // Address of dnsgw
 BAddr dnsgw;
 void terminate (void);
@@ -310,9 +311,6 @@ static void lwip_init_job_hadler (void *unused);
 static void tcp_timer_handler (void *unused);
 static void device_error_handler (void *unused);
 static void device_read_handler_send (void *unused, uint8_t *data, int data_len);
-#ifdef ANDROID
-static int process_device_dns_packet (uint8_t *data, int data_len);
-#endif
 static int process_device_udp_packet (uint8_t *data, int data_len);
 static err_t netif_init_func (struct netif *netif);
 static err_t netif_output_func (struct netif *netif, struct pbuf *p, ip_addr_t *ipaddr);
@@ -339,7 +337,7 @@ static int client_socks_recv_send_out (struct tcp_client *client);
 static err_t client_sent_func (void *arg, struct tcp_pcb *tpcb, u16_t len);
 static void udpgw_client_handler_received (void *unused, BAddr local_addr, BAddr remote_addr, const uint8_t *data, int data_len);
 
-#ifdef ANDROID
+#ifdef __ANDROID__
 static void daemonize(const char* path) {
 
     /* Our process ID and Session ID */
@@ -452,7 +450,7 @@ int main (int argc, char **argv)
 
     BLog(BLOG_NOTICE, "initializing "GLOBAL_PRODUCT_NAME" "PROGRAM_NAME" "GLOBAL_VERSION);
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     if (options.pid) {
         daemonize(options.pid);
     }
@@ -491,9 +489,9 @@ int main (int argc, char **argv)
         goto fail2;
     }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     // use supplied file descriptor
-    
+
     int sock, fd;
     struct sockaddr_un addr;
 
@@ -503,6 +501,9 @@ int main (int argc, char **argv)
     }
 
     char *path = "/data/data/net.typeblog.socks/sock_path";
+    if (options.sock_path != NULL) {
+        path = options.sock_path;
+    }
     unlink(path);
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
@@ -524,7 +525,7 @@ int main (int argc, char **argv)
         int sock2;
         struct sockaddr_un remote;
         int t = sizeof(remote);
-        if ((sock2 = accept(sock, (struct sockaddr *)&remote, &t)) == -1) { 
+        if ((sock2 = accept(sock, (struct sockaddr *)&remote, &t)) == -1) {
             BLog(BLOG_ERROR, "accept() failed: %s (sock = %d)\n", strerror(errno), sock);
             continue;
         }
@@ -591,7 +592,7 @@ int main (int argc, char **argv)
 
         // init udpgw client
         if (!SocksUdpGwClient_Init(&udpgw_client, udp_mtu, DEFAULT_UDPGW_MAX_CONNECTIONS, options.udpgw_connection_buffer_size, UDPGW_KEEPALIVE_TIME,
-                                   socks_server_addr, socks_auth_info, socks_num_auth_info,
+                                   socks_server_addr, dnsgw, socks_auth_info, socks_num_auth_info,
                                    udpgw_remote_server_addr, UDPGW_RECONNECT_TIME, &ss, NULL, udpgw_client_handler_received
         )) {
             BLog(BLOG_ERROR, "SocksUdpGwClient_Init failed");
@@ -648,10 +649,10 @@ int main (int argc, char **argv)
 
     // free netif
     if (have_netif) {
-        netif_remove(&netif);
+        netif_remove(&the_netif);
     }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     BLog(BLOG_NOTICE, "Free TCP connections");
     tcp_remove(tcp_bound_pcbs);
     tcp_remove(tcp_active_pcbs);
@@ -715,12 +716,13 @@ void print_help (const char *name)
         #endif
         "        [--loglevel <0-5/none/error/warning/notice/info/debug>]\n"
         "        [--channel-loglevel <channel-name> <0-5/none/error/warning/notice/info/debug>] ...\n"
-#ifdef ANDROID
+#ifdef __ANDROID__
         "        [--fake-proc]\n"
         "        [--tunfd <fd>]\n"
         "        [--tunmtu <mtu>]\n"
         "        [--dnsgw <dns_gateway_address>]\n"
         "        [--pid <pid_file>]\n"
+        "        [--sock-path <sock_path>]\n"
 #else
         "        [--tundev <name>]\n"
 #endif
@@ -768,11 +770,12 @@ int parse_arguments (int argc, char *argv[])
     for (int i = 0; i < BLOG_NUM_CHANNELS; i++) {
         options.loglevels[i] = -1;
     }
-#ifdef ANDROID
+#ifdef __ANDROID__
     options.tun_fd = -1;
     options.tun_mtu = 1500;
     options.fake_proc = 0;
     options.pid = NULL;
+    options.sock_path = NULL;
 #else
     options.tundev = NULL;
 #endif
@@ -865,7 +868,7 @@ int parse_arguments (int argc, char *argv[])
             options.loglevels[channel] = loglevel;
             i += 2;
         }
-#ifdef ANDROID
+#ifdef __ANDROID__
         else if (!strcmp(arg, "--fake-proc")) {
             options.fake_proc = 1;
         }
@@ -897,6 +900,14 @@ int parse_arguments (int argc, char *argv[])
                 return 0;
             }
             options.dnsgw = argv[i + 1];
+            i++;
+        }
+        else if (!strcmp(arg, "--sock-path")) {
+            if (1 >= argc - i) {
+                fprintf(stderr, "%s: requires an argument\n", arg);
+                return 0;
+            }
+            options.sock_path = argv[i + 1];
             i++;
         }
         else if (!strcmp(arg, "--pid")) {
@@ -1086,7 +1097,7 @@ int process_arguments (void)
 
     // parse IP6 address
     if (options.netif_ip6addr) {
-        if (!ipaddr6_parse_ipv6_addr(options.netif_ip6addr, &netif_ip6addr)) {
+        if (!ipaddr6_parse_ipv6_addr(MemRef_MakeCstr(options.netif_ip6addr), &netif_ip6addr)) {
             BLog(BLOG_ERROR, "netif ip6addr: incorrect");
             return 0;
         }
@@ -1135,7 +1146,7 @@ int process_arguments (void)
         }
     }
 
-#ifdef ANDROID
+#ifdef __ANDROID__
     // resolve dnsgw addr
     if (options.dnsgw) {
         if (!BAddr_Parse2(&dnsgw, options.dnsgw, NULL, 0, 0)) {
@@ -1198,25 +1209,25 @@ void lwip_init_job_hadler (void *unused)
     ip_addr_set_any(&gw);
 
     // init netif
-    if (!netif_add(&netif, &addr, &netmask, &gw, NULL, netif_init_func, netif_input_func)) {
+    if (!netif_add(&the_netif, &addr, &netmask, &gw, NULL, netif_init_func, netif_input_func)) {
         BLog(BLOG_ERROR, "netif_add failed");
         goto fail;
     }
     have_netif = 1;
 
     // set netif up
-    netif_set_up(&netif);
+    netif_set_up(&the_netif);
 
     // set netif pretend TCP
-    netif_set_pretend_tcp(&netif, 1);
+    netif_set_pretend_tcp(&the_netif, 1);
 
     // set netif default
-    netif_set_default(&netif);
+    netif_set_default(&the_netif);
 
     if (options.netif_ip6addr) {
         // add IPv6 address
-        memcpy(netif_ip6_addr(&netif, 0), netif_ip6addr.bytes, sizeof(netif_ip6addr.bytes));
-        netif_ip6_addr_set_state(&netif, 0, IP6_ADDR_VALID);
+        memcpy(netif_ip6_addr(&the_netif, 0), netif_ip6addr.bytes, sizeof(netif_ip6addr.bytes));
+        netif_ip6_addr_set_state(&the_netif, 0, IP6_ADDR_VALID);
     }
 
     // init listener
@@ -1307,13 +1318,6 @@ void device_read_handler_send (void *unused, uint8_t *data, int data_len)
     // accept packet
     PacketPassInterface_Done(&device_read_interface);
 
-#ifdef ANDROID
-    // process DNS directly
-    if (process_device_dns_packet(data, data_len)) {
-        return;
-    }
-#endif
-
     // process UDP directly
     if (process_device_udp_packet(data, data_len)) {
         return;
@@ -1334,157 +1338,11 @@ void device_read_handler_send (void *unused, uint8_t *data, int data_len)
     ASSERT_FORCE(pbuf_take(p, data, data_len) == ERR_OK)
 
     // pass pbuf to input
-    if (netif.input(p, &netif) != ERR_OK) {
+    if (the_netif.input(p, &the_netif) != ERR_OK) {
         BLog(BLOG_WARNING, "device read: input failed");
         pbuf_free(p);
     }
 }
-
-#ifdef ANDROID
-int process_device_dns_packet (uint8_t *data, int data_len)
-{
-    ASSERT(data_len >= 0)
-
-    // do nothing if we don't have dnsgw
-    if (!options.dnsgw) {
-        goto fail;
-    }
-
-    static int init = 0;
-
-    int to_dns;
-    int from_dns;
-    int packet_length = 0;
-
-    uint8_t ip_version = 0;
-    if (data_len > 0) {
-        ip_version = (data[0] >> 4);
-    }
-
-    switch (ip_version) {
-        case 4: {
-            // ignore non-UDP packets
-            if (data_len < sizeof(struct ipv4_header) || data[offsetof(struct ipv4_header, protocol)] != IPV4_PROTOCOL_UDP) {
-                goto fail;
-            }
-
-            // parse IPv4 header
-            struct ipv4_header ipv4_header;
-            if (!ipv4_check(data, data_len, &ipv4_header, &data, &data_len)) {
-                goto fail;
-            }
-
-            // parse UDP
-            struct udp_header udp_header;
-            if (!udp_check(data, data_len, &udp_header, &data, &data_len)) {
-                goto fail;
-            }
-
-            // verify UDP checksum
-            uint16_t checksum_in_packet = udp_header.checksum;
-            udp_header.checksum = 0;
-            uint16_t checksum_computed = udp_checksum(&udp_header, data, data_len, ipv4_header.source_address, ipv4_header.destination_address);
-            if (checksum_in_packet != checksum_computed) {
-                goto fail;
-            }
-
-            // to port 53 is considered a DNS packet
-            to_dns = udp_header.dest_port == hton16(53);
-
-            // from port 8153 is considered a DNS packet
-            from_dns = udp_header.source_port == dnsgw.ipv4.port;
-
-            // if not DNS packet, just bypass it.
-            if (!to_dns && !from_dns) {
-                goto fail;
-            }
-
-            // modify DNS packet
-            if (to_dns) {
-                BLog(BLOG_INFO, "UDP: to DNS %d bytes", data_len);
-
-                // construct addresses
-                if (!init) {
-                    init = 1;
-                    BAVL_Init(&connections_tree, OFFSET_DIFF(Connection, port, connections_tree_node), (BAVL_comparator)conaddr_comparator, NULL);
-                }
-                BAddr local_addr;
-                BAddr remote_addr;
-                BAddr_InitIPv4(&local_addr, ipv4_header.source_address, udp_header.source_port);
-                BAddr_InitIPv4(&remote_addr, ipv4_header.destination_address, udp_header.dest_port);
-                insert_connection(local_addr, remote_addr, udp_header.source_port);
-
-                // build IP header
-                ipv4_header.destination_address = dnsgw.ipv4.ip;
-                ipv4_header.source_address = netif_ipaddr.ipv4;
-
-                // build UDP header
-                udp_header.dest_port = dnsgw.ipv4.port;
-
-            } else if (from_dns) {
-
-                // if not initialized
-                if (!init) {
-                    goto fail;
-                }
-
-                BLog(BLOG_INFO, "UDP: from DNS %d bytes", data_len);
-
-                Connection * con = find_connection(udp_header.dest_port);
-                if (con != NULL)
-                {
-                    // build IP header
-                    ipv4_header.source_address = con->remote_addr.ipv4.ip;
-                    ipv4_header.destination_address = con->local_addr.ipv4.ip;
-
-                    // build UDP header
-                    udp_header.source_port = con->remote_addr.ipv4.port;
-
-                    remove_connection(con);
-
-                }
-                else
-                {
-                    goto fail;
-                }
-            }
-
-            // update IPv4 header's checksum
-            ipv4_header.checksum = hton16(0);
-            ipv4_header.checksum = ipv4_checksum(&ipv4_header, NULL, 0);
-
-            // update UDP header's checksum
-            udp_header.checksum = hton16(0);
-            udp_header.checksum = udp_checksum(&udp_header, data, data_len,
-                    ipv4_header.source_address, ipv4_header.destination_address);
-
-            // write packet
-            memcpy(device_write_buf, &ipv4_header, sizeof(ipv4_header));
-            memcpy(device_write_buf + sizeof(ipv4_header), &udp_header, sizeof(udp_header));
-            memcpy(device_write_buf + sizeof(ipv4_header) + sizeof(udp_header), data, data_len);
-            packet_length = sizeof(ipv4_header) + sizeof(udp_header) + data_len;
-
-        } break;
-
-        case 6: {
-            // TODO: support IPv6 DNS Gateway
-            goto fail;
-        } break;
-
-        default: {
-            goto fail;
-        } break;
-    }
-
-    // submit packet
-    BTap_Send(&device, device_write_buf, packet_length);
-
-    return 1;
-
-fail:
-    return 0;
-}
-#endif
 
 int process_device_udp_packet (uint8_t *data, int data_len)
 {
@@ -1539,9 +1397,7 @@ int process_device_udp_packet (uint8_t *data, int data_len)
 
             // if transparent DNS is enabled, any packet arriving at out netif
             // address to port 53 is considered a DNS packet
-            is_dns = (options.udpgw_transparent_dns &&
-                      ipv4_header.destination_address == netif_ipaddr.ipv4 &&
-                      udp_header.dest_port == hton16(53));
+            is_dns = (options.dnsgw && udp_header.dest_port == hton16(53));
         } break;
 
         case 6: {
@@ -2266,7 +2122,7 @@ void udpgw_client_handler_received (void *unused, BAddr local_addr, BAddr remote
 
     switch (local_addr.type) {
         case BADDR_TYPE_IPV4: {
-#ifdef ANDROID
+#ifdef __ANDROID__
             BLog(BLOG_INFO, "UDP: from udprelay %d bytes", data_len);
 #else
             BLog(BLOG_INFO, "UDP: from udpgw %d bytes", data_len);
