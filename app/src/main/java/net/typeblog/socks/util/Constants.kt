@@ -8,6 +8,8 @@ object Constants {
     const val ROUTE_ALL = "all"
     const val ROUTE_CHN = "chn"
 
+    const val CHANNEL_ID = "socksdroid_channel"
+
     const val INTENT_PREFIX = "SOCKS"
     const val INTENT_NAME = INTENT_PREFIX + "NAME"
     const val INTENT_SERVER = INTENT_PREFIX + "SERV"

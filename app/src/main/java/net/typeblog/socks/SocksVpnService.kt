@@ -1,11 +1,16 @@
 package net.typeblog.socks
 
 import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.net.VpnService
+import android.os.Build
 import android.os.IBinder
 import android.os.ParcelFileDescriptor
+import android.support.v4.app.NotificationCompat
 import android.text.TextUtils
 import android.util.Log
 import net.typeblog.socks.BuildConfig.DEBUG
@@ -27,6 +32,18 @@ class SocksVpnService : VpnService() {
         override fun stop() {
             stopMe()
         }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Create the notification channel
+            val channel = NotificationChannel(Constants.CHANNEL_ID, "SocksDroid", NotificationManager.IMPORTANCE_MIN)
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -59,7 +76,7 @@ class SocksVpnService : VpnService() {
 
         // Create the notification
         startForeground(R.drawable.ic_launcher,
-                Notification.Builder(this)
+                NotificationCompat.Builder(this, Constants.CHANNEL_ID)
                         .setContentTitle(getString(R.string.notify_title))
                         .setContentText(String.format(getString(R.string.notify_msg), name))
                         .setPriority(Notification.PRIORITY_MIN)
