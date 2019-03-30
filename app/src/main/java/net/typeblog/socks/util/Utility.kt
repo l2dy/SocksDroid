@@ -16,7 +16,7 @@ object Utility {
         // Check app version
         val pref = context.getSharedPreferences("ver", Context.MODE_PRIVATE)
 
-        var ver = 0
+        val ver: Int
         try {
             ver = context.packageManager.getPackageInfo("net.typeblog.socks", 0).versionCode
         } catch (e: Exception) {
@@ -60,8 +60,8 @@ object Utility {
         }
 
         for (f in files) {
-            var input: InputStream? = null
-            var out: OutputStream? = null
+            var input: InputStream?
+            var out: OutputStream?
 
             try {
                 input = m.open(source + "/" + f)
@@ -115,14 +115,14 @@ object Utility {
             return
         }
 
-        var i: InputStream? = null
+        val i: InputStream?
         try {
             i = FileInputStream(file)
         } catch (e: Exception) {
             return
         }
 
-        var str: String
+        val str: String
 
         try {
             str = i.bufferedReader().use { it.readText() }

@@ -6,7 +6,7 @@ import net.typeblog.socks.R
 
 object Routes {
     fun addRoutes(context: Context, builder: VpnService.Builder, name: String) {
-        var routes: Array<String>? = null
+        val routes: Array<String>?
         when (name) {
             Constants.ROUTE_ALL -> routes = arrayOf("0.0.0.0/0")
             Constants.ROUTE_CHN -> routes = context.resources.getStringArray(R.array.simple_route)

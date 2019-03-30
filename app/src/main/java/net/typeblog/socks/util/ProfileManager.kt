@@ -18,7 +18,7 @@ class ProfileManager private constructor(private val mContext: Context) {
         get() = mProfiles.toTypedArray()
 
     val default: Profile?
-        get() = getProfile(mPref.getString(Constants.PREF_LAST_PROFILE, mProfiles[0]))
+        get() = getProfile(mPref.getString(Constants.PREF_LAST_PROFILE, mProfiles[0])!!)
 
     init {
         mPref = mContext.getSharedPreferences(Constants.PREF, Context.MODE_PRIVATE)
