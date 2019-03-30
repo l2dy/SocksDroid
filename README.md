@@ -22,7 +22,7 @@ DNS
 ---
 If the server does not run `udpgw`, DNS lookups can also be processed in this app.
 
-It makes use of the TCP DNS feature of `pdnsd`. You just set a DNS server that supports TCP DNS in this app, and all DNS requests will be transformed into TCP queries.
+It makes use of the TCP DNS feature of `pdnsd`. You just set a DNS server that supports TCP DNS in this app, and all DNS requests will be transformed into TCP queries *bypassing the proxy*.
 
 Routing
 ---
