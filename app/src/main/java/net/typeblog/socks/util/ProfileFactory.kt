@@ -8,18 +8,15 @@ import java.util.*
 internal class ProfileFactory private constructor(private val mContext: Context, private val mPref: SharedPreferences) {
     private val mMap = HashMap<String, WeakReference<Profile>>()
 
-    fun getProfile(name: String): Profile {
-        var pRef: WeakReference<Profile>? = mMap[name]
+    fun getProfile(name: String): Profile? {
+        var p = mMap[name]
 
-        var p = pRef?.get()
-
-        if (p == null) {
-            p = Profile(mContext, mPref, name)
-            pRef = WeakReference(p)
-            mMap.put(name, pRef)
+        if (p?.get() == null) {
+            p = WeakReference(Profile(mContext, mPref, name))
+            mMap[name] = p
         }
 
-        return p
+        return p.get()
     }
 
     companion object {

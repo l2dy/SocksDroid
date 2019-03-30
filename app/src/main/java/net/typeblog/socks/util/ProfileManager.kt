@@ -39,11 +39,11 @@ class ProfileManager private constructor(private val mContext: Context) {
         }
     }
 
-    fun getProfile(name: String?): Profile? {
+    fun getProfile(name: String): Profile? {
         return if (!mProfiles.contains(name)) {
             null
         } else {
-            mFactory.getProfile(name!!)
+            mFactory.getProfile(name)
         }
     }
 
@@ -65,7 +65,6 @@ class ProfileManager private constructor(private val mContext: Context) {
         }
     }
 
-    // TODO: Fix crash
     fun removeProfile(name: String): Boolean {
         if (name === mProfiles[0] || !mProfiles.contains(name)) {
             return false

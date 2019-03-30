@@ -124,40 +124,40 @@ class ProfileFragment : PreferenceFragment(), Preference.OnPreferenceClickListen
             return true
         } else if (p === mPrefServer) {
             mProfile!!.server = newValue.toString()
-            resetTextN(mPrefServer, newValue)
+            resetTextN(mPrefServer!!, newValue)
             return true
         } else if (p === mPrefPort) {
             if (TextUtils.isEmpty(newValue.toString()))
                 return false
 
             mProfile!!.port = Integer.parseInt(newValue.toString())
-            resetTextN(mPrefPort, newValue)
+            resetTextN(mPrefPort!!, newValue)
             return true
         } else if (p === mPrefUserpw) {
             mProfile!!.setIsUserpw(java.lang.Boolean.parseBoolean(newValue.toString()))
             return true
         } else if (p === mPrefUsername) {
             mProfile!!.username = newValue.toString()
-            resetTextN(mPrefUsername, newValue)
+            resetTextN(mPrefUsername!!, newValue)
             return true
         } else if (p === mPrefPassword) {
             mProfile!!.password = newValue.toString()
-            resetTextN(mPrefPassword, newValue)
+            resetTextN(mPrefPassword!!, newValue)
             return true
         } else if (p === mPrefRoutes) {
             mProfile!!.route = newValue.toString()
-            resetListN(mPrefRoutes, newValue)
+            resetListN(mPrefRoutes!!, newValue)
             return true
         } else if (p === mPrefDns) {
             mProfile!!.dns = newValue.toString()
-            resetTextN(mPrefDns, newValue)
+            resetTextN(mPrefDns!!, newValue)
             return true
         } else if (p === mPrefDnsPort) {
             if (TextUtils.isEmpty(newValue.toString()))
                 return false
 
-            mProfile!!.dnsPort = Integer.valueOf(newValue.toString())!!
-            resetTextN(mPrefDnsPort, newValue)
+            mProfile!!.dnsPort = Integer.valueOf(newValue.toString())
+            resetTextN(mPrefDnsPort!!, newValue)
             return true
         } else if (p === mPrefPerApp) {
             mProfile!!.isPerApp = java.lang.Boolean.parseBoolean(newValue.toString())
@@ -176,7 +176,7 @@ class ProfileFragment : PreferenceFragment(), Preference.OnPreferenceClickListen
             return true
         } else if (p === mPrefUDPGW) {
             mProfile!!.udpgw = newValue.toString()
-            resetTextN(mPrefUDPGW, newValue)
+            resetTextN(mPrefUDPGW!!, newValue)
             return true
         } else if (p === mPrefAuto) {
             mProfile!!.setAutoConnect(java.lang.Boolean.parseBoolean(newValue.toString()))
@@ -274,8 +274,8 @@ class ProfileFragment : PreferenceFragment(), Preference.OnPreferenceClickListen
             p.summary = p.entry
     }
 
-    private fun resetListN(pref: ListPreference?, newValue: Any) {
-        pref!!.summary = newValue.toString()
+    private fun resetListN(pref: ListPreference, newValue: Any) {
+        pref.summary = newValue.toString()
     }
 
     private fun resetText(vararg pref: EditTextPreference) {
@@ -291,8 +291,8 @@ class ProfileFragment : PreferenceFragment(), Preference.OnPreferenceClickListen
         }
     }
 
-    private fun resetTextN(pref: EditTextPreference?, newValue: Any) {
-        if (pref!!.editText.inputType and InputType.TYPE_TEXT_VARIATION_PASSWORD != InputType.TYPE_TEXT_VARIATION_PASSWORD) {
+    private fun resetTextN(pref: EditTextPreference, newValue: Any) {
+        if (pref.editText.inputType and InputType.TYPE_TEXT_VARIATION_PASSWORD != InputType.TYPE_TEXT_VARIATION_PASSWORD) {
             pref.summary = newValue.toString()
         } else {
             val text = newValue.toString()

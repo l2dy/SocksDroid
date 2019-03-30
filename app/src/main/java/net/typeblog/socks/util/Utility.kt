@@ -31,15 +31,15 @@ object Utility {
         val target = Constants.DIR
 
         if (DEBUG) {
-            Log.d(TAG, "target = " + target)
+            Log.d(TAG, "target = $target")
         }
 
-        if (File(target + "/tun2socks").exists()) {
-            File(target + "/tun2socks").delete()
+        if (File("$target/tun2socks").exists()) {
+            File("$target/tun2socks").delete()
         }
 
-        if (File(target + "/pdnsd").exists()) {
-            File(target + "/pdnsd").delete()
+        if (File("$target/pdnsd").exists()) {
+            File("$target/pdnsd").delete()
         }
 
         File(target).mkdir()
@@ -65,7 +65,7 @@ object Utility {
 
             try {
                 input = m.open(source + "/" + f)
-                out = FileOutputStream(target + "/" + f)
+                out = FileOutputStream("$target/$f")
 
                 input.copyTo(out)
 
@@ -126,13 +126,14 @@ object Utility {
 
         try {
             str = i.bufferedReader().use { it.readText() }
+            i.close()
         } catch (e: Exception) {
             return
         }
 
         try {
             val pid = Integer.parseInt(str.trim { it <= ' ' }.replace("\n", ""))
-            Runtime.getRuntime().exec("kill " + pid).waitFor()
+            Runtime.getRuntime().exec("kill $pid").waitFor()
             file.delete()
         } catch (e: Exception) {
 
@@ -153,7 +154,7 @@ object Utility {
     fun makePdnsdConf(context: Context, dns: String, port: Int) {
         val conf = String.format(context.getString(R.string.pdnsd_conf), dns, port)
 
-        val f = File(Constants.DIR + "/pdnsd.conf")
+        val f = File("${Constants.DIR}/pdnsd.conf")
 
         if (f.exists()) {
             f.delete()
@@ -168,7 +169,7 @@ object Utility {
 
         }
 
-        val cache = File(Constants.DIR + "/pdnsd.cache")
+        val cache = File("${Constants.DIR}/pdnsd.cache")
 
         if (!cache.exists()) {
             try {
@@ -198,7 +199,7 @@ object Utility {
 
         if (profile.isPerApp) {
             i.putExtra(Constants.INTENT_APP_BYPASS, profile.isBypassApp)
-                    .putExtra(Constants.INTENT_APP_LIST, profile.appList.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
+                    .putExtra(Constants.INTENT_APP_LIST, profile.appList!!.split("\n".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
         }
 
         if (profile.hasUDP()) {

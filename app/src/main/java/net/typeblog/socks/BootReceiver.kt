@@ -14,7 +14,7 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val p = ProfileManager.getInstance(context).default
 
-        if (p != null && p.autoConnect() && VpnService.prepare(context) == null) {
+        if (p!!.autoConnect() && VpnService.prepare(context) == null) {
 
             if (DEBUG) {
                 Log.d(TAG, "starting VPN service on boot")

@@ -8,7 +8,7 @@ import android.content.SharedPreferences
 class Profile internal constructor(private val mContext: Context, private val mPref: SharedPreferences, val name: String) {
     private val mPrefix: String
 
-    var server: String
+    var server: String?
         get() = mPref.getString(key("server"), "127.0.0.1")
         set(server) {
             mPref.edit().putString(key("server"), server).commit()
@@ -23,25 +23,25 @@ class Profile internal constructor(private val mContext: Context, private val mP
     val isUserPw: Boolean
         get() = mPref.getBoolean(key("userpw"), false)
 
-    var username: String
+    var username: String?
         get() = mPref.getString(key("username"), "")
         set(username) {
             mPref.edit().putString(key("username"), username).commit()
         }
 
-    var password: String
+    var password: String?
         get() = mPref.getString(key("password"), "")
         set(password) {
             mPref.edit().putString(key("password"), password).commit()
         }
 
-    var route: String
+    var route: String?
         get() = mPref.getString(key("route"), Constants.ROUTE_ALL)
         set(route) {
             mPref.edit().putString(key("route"), route).commit()
         }
 
-    var dns: String
+    var dns: String?
         get() = mPref.getString(key("dns"), "8.8.8.8")
         set(dns) {
             mPref.edit().putString(key("dns"), dns).commit()
@@ -65,13 +65,13 @@ class Profile internal constructor(private val mContext: Context, private val mP
             mPref.edit().putBoolean(key("appbypass"), `is`).commit()
         }
 
-    var appList: String
+    var appList: String?
         get() = mPref.getString(key("applist"), "")
         set(list) {
             mPref.edit().putString(key("applist"), list).commit()
         }
 
-    var udpgw: String
+    var udpgw: String?
         get() = mPref.getString(key("udpgw"), "127.0.0.1:7300")
         set(gw) {
             mPref.edit().putString(key("udpgw"), gw).commit()

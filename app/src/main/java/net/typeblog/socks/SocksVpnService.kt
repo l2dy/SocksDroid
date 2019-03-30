@@ -113,8 +113,8 @@ class SocksVpnService : VpnService() {
     private fun stopMe() {
         stopForeground(true)
 
-        Utility.killPidFile(Constants.DIR + "/tun2socks.pid")
-        Utility.killPidFile(Constants.DIR + "/pdnsd.pid")
+        Utility.killPidFile("${Constants.DIR}/tun2socks.pid")
+        Utility.killPidFile("${Constants.DIR}/pdnsd.pid")
 
         try {
             System.jniclose(mInterface!!.fd)
@@ -199,7 +199,7 @@ class SocksVpnService : VpnService() {
 
         Utility.exec(String.format("%s/pdnsd -c %s/pdnsd.conf", Constants.DIR, Constants.DIR))
 
-        var commandPrefix = String.format(
+        val commandPrefix = String.format(
                 "%s/tun2socks --netif-ipaddr 26.26.26.2"
                         + " --netif-netmask 255.255.255.0"
                         + " --socks-server-addr %s:%d"
@@ -208,12 +208,13 @@ class SocksVpnService : VpnService() {
                         + " --loglevel 3"
                         + " --pid %s/tun2socks.pid", Constants.DIR, server, port, fd, Constants.DIR)
 
-        var command = commandPrefix.split(" ")
+        val command = commandPrefix.split(" ").toMutableList()
 
         if (user != null) {
             command += "--username"
             command += user
         }
+
         if (passwd != null) {
             command += "--password"
             command += passwd
